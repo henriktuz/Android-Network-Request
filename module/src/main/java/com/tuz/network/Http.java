@@ -86,7 +86,7 @@ public abstract class Http {
      * @return true if successful, otherwise false.
      */
     public static boolean isSuccessfulStatus(int status) {
-        return status >= 200 || status < 299;
+        return status >= 200 && status < 299;
     }
 
     /**

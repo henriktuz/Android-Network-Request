@@ -5,7 +5,6 @@ import java.util.Objects;
 /**
  * Class representing a header in a network request.
  */
-
 public class Header {
 
     /**
@@ -61,7 +60,7 @@ public class Header {
         boolean equals = false;
         if (other instanceof Header) {
             Header header = (Header) other;
-            equals = Objects.equals(mKey, header.mKey) && Objects.equals(mValue, header.mValue);
+            equals = mKey.equals(header.mKey) && mValue.equals(header.mValue);
         }
         return equals;
     }

@@ -2,6 +2,7 @@ package com.tuz.network;
 
 import android.net.http.HttpResponseCache;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
@@ -12,15 +13,9 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyStore;
-import java.security.cert.Certificate;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.zip.GZIPOutputStream;
-
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
 
 /**
  * Class for making a http request.
@@ -54,16 +49,6 @@ class HttpRequest extends Http {
      * The default connection timeout.
      */
     private static final int DEFAULT_CONNECTION_TIMEOUT = 1500;
-
-    /**
-     * The ssl protocol.
-     */
-    private static final String SSL_PROTOCOL = "TLS";
-
-    /**
-     * The certificate key.
-     */
-    private static final String CERTIFICATE_KEY = "ca";
 
     /**
      * The url of the request.
@@ -108,12 +93,7 @@ class HttpRequest extends Http {
     /**
      * The form body.
      */
-    private MultipartFormBody mFormBody;
-
-    /**
-     * The certificate for configuring secure connections.
-     */
-    private Certificate mCertificate;
+    private MultipartForm mFormBody;
 
     /**
      * The transfer progress.
@@ -139,15 +119,6 @@ class HttpRequest extends Http {
      */
     void setUseCache(boolean useCache) {
         mUseCache = useCache;
-    }
-
-    /**
-     * Set use certificate for pinning.
-     *
-     * @param certificate the certificate.
-     */
-    void setCertificate(Certificate certificate) {
-        mCertificate = certificate;
     }
 
     /**
@@ -186,6 +157,15 @@ class HttpRequest extends Http {
     }
 
     /**
+     * Add a form body.
+     *
+     * @param body the form body.
+     */
+    void setMultipartBody(MultipartForm body) {
+        mFormBody = body;
+    }
+
+    /**
      * Set the body of the request.
      *
      * @param body     the body.
@@ -204,13 +184,24 @@ class HttpRequest extends Http {
     }
 
     /**
-     * Set the json body.
+     * Set the json object body.
      *
      * @param json     the json object.
      * @param compress true if the body should be compressed using gzip.
      * @param stream   true if streaming mode should be used.
      */
     void setBody(JSONObject json, boolean compress, boolean stream) {
+        setBody(json.toString().getBytes(StandardCharsets.UTF_8), MIME_JSON, compress, stream);
+    }
+
+    /**
+     * Set the json array body.
+     *
+     * @param json     the json object.
+     * @param compress true if the body should be compressed using gzip.
+     * @param stream   true if streaming mode should be used.
+     */
+    void setBody(JSONArray json, boolean compress, boolean stream) {
         setBody(json.toString().getBytes(StandardCharsets.UTF_8), MIME_JSON, compress, stream);
     }
 
@@ -236,15 +227,29 @@ class HttpRequest extends Http {
     }
 
     /**
+     * Report the network progress.
+     *
+     * @param totalBytes       the total bytes to transfer.
+     * @param transferredBytes the bytes transferred so far.
+     */
+    void reportNetworkProgress(long totalBytes, long transferredBytes) {
+        if (mProgress.update(totalBytes, transferredBytes) && mListener != null) {
+            mListener.onTransferProgressUpdated(mProgress);
+        }
+    }
+
+    /**
      * Execute the request.
      *
      * @param connection the connection.
      * @return the response.
-     * @throws Exception if anything goes wrong.
+     * @throws IOException if anything goes wrong.
      */
     private Response execute(HttpURLConnection connection) throws IOException {
         if (mBody != null) {
-            writeBody(connection, mBody);
+            writeBody(connection);
+        } else if (mFormBody != null) {
+            writeFormBody(connection);
         } else {
             connection.setDoOutput(false);
         }
@@ -261,10 +266,6 @@ class HttpRequest extends Http {
     private HttpURLConnection setupConnection() throws Exception {
         URL url = new URL(mUrl);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
-        if (connection instanceof HttpsURLConnection && mCertificate != null) {
-            configureSecureConnection((HttpsURLConnection) connection);
-        }
 
         if (!mUseCache) {
             // Make sure we are not using the cache
@@ -285,48 +286,24 @@ class HttpRequest extends Http {
     }
 
     /**
-     * Configure a secure connection.
-     *
-     * @param connection the network connection.
-     * @throws Exception if the configuration fails.
-     */
-    private void configureSecureConnection(HttpsURLConnection connection) throws Exception {
-        String keyStoreType = KeyStore.getDefaultType();
-        KeyStore keyStore = KeyStore.getInstance(keyStoreType);
-        keyStore.load(null, null);
-        keyStore.setCertificateEntry(CERTIFICATE_KEY, mCertificate);
-
-        String algorithm = TrustManagerFactory.getDefaultAlgorithm();
-        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(algorithm);
-        trustManagerFactory.init(keyStore);
-
-        SSLContext sslContext = SSLContext.getInstance(SSL_PROTOCOL);
-        sslContext.init(null, trustManagerFactory.getTrustManagers(), null);
-
-        // Set the ssl socket factory.
-        connection.setSSLSocketFactory(sslContext.getSocketFactory());
-    }
-
-    /**
      * Write the body to the connection output.
      *
      * @param connection the connection.
-     * @param body       the body.
      * @throws IOException if the writing of the body fails.
      */
-    private void writeBody(HttpURLConnection connection, byte[] body) throws IOException {
+    private void writeBody(HttpURLConnection connection) throws IOException {
         int totalBytesTransferred = 0;
 
         if (mUseStreamingMode) {
             if (mCompress) {
                 connection.setChunkedStreamingMode(-1);
             } else {
-                connection.setFixedLengthStreamingMode(body.length);
+                connection.setFixedLengthStreamingMode(mBody.length);
             }
         }
 
         try (OutputStream os = getOutputStream(connection)) {
-            try (InputStream is = new ByteArrayInputStream(body)) {
+            try (InputStream is = new ByteArrayInputStream(mBody)) {
                 byte[] buffer = new byte[MAX_BUFFER_SIZE];
                 int read;
 
@@ -334,9 +311,26 @@ class HttpRequest extends Http {
                     os.write(buffer, 0, read);
                     totalBytesTransferred += read;
 
-                    reportNetworkProgress(body.length, totalBytesTransferred);
+                    reportNetworkProgress(mBody.length, totalBytesTransferred);
                 }
             }
+        }
+    }
+
+    /**
+     * Write the form body to the connection output.
+     *
+     * @param connection the http url connection.
+     * @throws IOException if the writing of the body fails.
+     */
+    private void writeFormBody(HttpURLConnection connection) throws IOException {
+        if (mUseStreamingMode) {
+            if (mCompress) {
+                connection.setChunkedStreamingMode(-1);
+            } else {
+                connection.setFixedLengthStreamingMode(mFormBody.size());
+            }
+            mFormBody.writeTo(connection, this);
         }
     }
 
@@ -350,17 +344,5 @@ class HttpRequest extends Http {
     private OutputStream getOutputStream(HttpURLConnection connection) throws IOException {
         OutputStream os = connection.getOutputStream();
         return mCompress ? new GZIPOutputStream(os) : new DataOutputStream(os);
-    }
-
-    /**
-     * Report the network progress.
-     *
-     * @param totalBytes       the total bytes to transfer.
-     * @param transferredBytes the bytes transferred so far.
-     */
-    private void reportNetworkProgress(long totalBytes, long transferredBytes) {
-        if (mProgress.update(totalBytes, transferredBytes) && mListener != null) {
-            mListener.onTransferProgressUpdated(mProgress);
-        }
     }
 }

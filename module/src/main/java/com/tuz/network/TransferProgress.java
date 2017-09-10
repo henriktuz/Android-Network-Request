@@ -3,7 +3,7 @@ package com.tuz.network;
 /**
  * Class representing the current transfer progress.
  */
-public class TransferProgress {
+public final class TransferProgress {
 
     /**
      * The total bytes transferred.

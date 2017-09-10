@@ -34,6 +34,9 @@ final class Response implements Closeable {
      */
     private Set<Header> mHeaders;
 
+    /**
+     * The http connection.
+     */
     private HttpURLConnection mConnection;
 
     /**
@@ -55,10 +58,10 @@ final class Response implements Closeable {
             }
         }
 
-        if (Http.isSuccessfulStatus(mStatus)) {
-            mInputStream = mConnection.getInputStream();
-        } else if (Http.isFailedStatus(mStatus)) {
+        if (Http.isFailedStatus(mStatus)) {
             mInputStream = mConnection.getErrorStream();
+        } else {
+            mInputStream = mConnection.getInputStream();
         }
     }
 

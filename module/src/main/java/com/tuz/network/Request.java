@@ -1,7 +1,7 @@
 package com.tuz.network;
 
 /**
- * The request interface for executing requests.
+ * The interface for executing requests.
  *
  * @param <Output> the output of the request.
  * @see RequestBuilder
@@ -34,6 +34,8 @@ public interface Request<Output> {
 
     /**
      * Execute the request asynchronously.
+     *
+     * @return a canceller.
      */
     Canceller executeAsync(RequestListener<Output> listener);
 

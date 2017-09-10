@@ -13,6 +13,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -109,8 +110,6 @@ public abstract class Utils {
      * @throws IOException when writing fails.
      */
     public static InputStream copy(InputStream is) throws IOException {
-        InputStream copy = null;
-
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         write(is, baos);
         close(baos);

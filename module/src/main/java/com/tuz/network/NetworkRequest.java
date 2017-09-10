@@ -41,9 +41,14 @@ class NetworkRequest<Output> implements Request<Output>, HttpRequest.IHttpTransf
     @Override
     public Output execute() throws NetworkException {
         mRequest.setProgressListener(this);
+        Output output = null;
 
         try (Response response = mRequest.execute()) {
-            return mParser.parseResponse(response);
+            int status = response.getStatus();
+            if (Http.isSuccessfulStatus(status)) {
+               output = mParser.parseResponse(response);
+            }
+            return output;
         } catch (Exception e) {
             throw new NetworkException(e);
         }

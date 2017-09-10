@@ -1,5 +1,6 @@
 package com.tuz.network;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -25,12 +26,12 @@ public final class RequestBuilder<Output> {
     /**
      * The http request.
      */
-    private HttpRequest mRequest;
+    private final HttpRequest mRequest;
 
     /**
      * The response parser.
      */
-    private ResponseParser<Output> mParser;
+    private final ResponseParser<Output> mParser;
 
     /**
      * Constructor.
@@ -82,18 +83,6 @@ public final class RequestBuilder<Output> {
     }
 
     /**
-     * Set a certificate to use when pinning a server. The certificate is only used if protocol
-     * https is used.
-     *
-     * @param certificate the certificate.
-     * @return the builder instance.
-     */
-    public RequestBuilder setCertificate(Certificate certificate) {
-        mRequest.setCertificate(certificate);
-        return this;
-    }
-
-    /**
      * Set a body.
      *
      * @param body     the body.
@@ -121,6 +110,30 @@ public final class RequestBuilder<Output> {
     }
 
     /**
+     * Set json body.
+     *
+     * @param json     the json object.
+     * @param compress flag for if the request should be compressed using gzip.
+     * @param stream   flag for if streaming mode should be used.
+     * @return the builder instance.
+     */
+    public RequestBuilder setBody(JSONArray json, boolean compress, boolean stream) {
+        mRequest.setBody(json, compress, stream);
+        return this;
+    }
+
+    /**
+     * Set a multi part form body.
+     *
+     * @param body the body.
+     * @return the builder instance.
+     */
+    public RequestBuilder setBody(MultipartForm body) {
+        mRequest.setMultipartBody(body);
+        return this;
+    }
+
+    /**
      * Build the request.
      *
      * @return the Request.
@@ -128,6 +141,4 @@ public final class RequestBuilder<Output> {
     public Request<Output> build() {
         return new NetworkRequest(mRequest, mParser);
     }
-
-
 }
