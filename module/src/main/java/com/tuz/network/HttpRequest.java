@@ -21,7 +21,7 @@ import java.util.zip.GZIPOutputStream;
  * Class for making a http request.
  */
 
-class HttpRequest extends Http {
+class HttpRequest extends Http implements ProgressUpdater {
 
     /**
      * Listener interface for the transfer progress.
@@ -226,13 +226,8 @@ class HttpRequest extends Http {
         return response;
     }
 
-    /**
-     * Report the network progress.
-     *
-     * @param totalBytes       the total bytes to transfer.
-     * @param transferredBytes the bytes transferred so far.
-     */
-    void reportNetworkProgress(long totalBytes, long transferredBytes) {
+    @Override
+    public void update(long totalBytes, long transferredBytes) {
         if (mProgress.update(totalBytes, transferredBytes) && mListener != null) {
             mListener.onTransferProgressUpdated(mProgress);
         }
@@ -311,7 +306,7 @@ class HttpRequest extends Http {
                     os.write(buffer, 0, read);
                     totalBytesTransferred += read;
 
-                    reportNetworkProgress(mBody.length, totalBytesTransferred);
+                    update(mBody.length, totalBytesTransferred);
                 }
             }
         }
@@ -330,7 +325,7 @@ class HttpRequest extends Http {
             } else {
                 connection.setFixedLengthStreamingMode(mFormBody.size());
             }
-            mFormBody.writeTo(connection, this);
+            mFormBody.onWriteTo(connection, this);
         }
     }
 

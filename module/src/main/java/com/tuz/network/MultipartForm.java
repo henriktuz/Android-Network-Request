@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -90,17 +91,17 @@ public class MultipartForm {
         /**
          * Write the form data.
          *
-         * @param request     the http request.
+         * @param updater     the progress updater.
          * @param os          the output stream.
          * @param size        the total size to transfer.
          * @return the total number of bytes written.
          *
          * @throws IOException when writing fails.
          */
-        void onWrite(HttpRequest request, DataOutputStream os, long size)
+        void onWrite(ProgressUpdater updater, DataOutputStream os, long size)
                 throws IOException {
             os.write(mTextContent);
-            request.reportNetworkProgress(size, os.size());
+            updater.update(size, os.size());
         }
     }
 
@@ -189,8 +190,8 @@ public class MultipartForm {
         }
 
         @Override
-        void onWrite(HttpRequest request, DataOutputStream os, long size) throws IOException {
-            super.onWrite(request, os, size);
+        void onWrite(ProgressUpdater updater, DataOutputStream os, long size) throws IOException {
+            super.onWrite(updater, os, size);
 
             // Write the file.
             try (InputStream is = new FileInputStream(mFile)) {
@@ -203,7 +204,7 @@ public class MultipartForm {
                         os.write(buffer, 0, read);
 
                         // Report the current progress.
-                        request.reportNetworkProgress(size, os.size());
+                        updater.update(size, os.size());
                     } else {
                         throw new RuntimeException("Multi part upload was interrupted.");
                     }
@@ -290,19 +291,32 @@ public class MultipartForm {
      * Write form to the output stream.
      *
      * @param connection the connection to write to.
+     * @param updater    the progress updater.
+     * @throws IOException when writing fails.
      */
-    void writeTo(HttpURLConnection connection, HttpRequest request) throws IOException {
+    void onWriteTo(HttpURLConnection connection, ProgressUpdater updater) throws IOException {
         connection.setRequestProperty(Http.CONTENT_TYPE, getMultipartContentType());
 
         try (DataOutputStream os = new DataOutputStream(connection.getOutputStream())) {
-            long size = size();
-
-            for (FormWriter writer : mFormWriters) {
-                writer.onWrite(request, os, size);
-                os.write(LINE_END);
-            }
-            request.reportNetworkProgress(size, os.size());
+            writeTo(os, updater);
         }
+    }
+
+    /**
+     * Write to the opened output stream.
+     *
+     * @param os      the output stream.
+     * @param updater the progress updater.
+     * @throws IOException when writing fails.
+     */
+    void writeTo(DataOutputStream os, ProgressUpdater updater) throws IOException {
+        long size = size();
+
+        for (FormWriter writer : mFormWriters) {
+            writer.onWrite(updater, os, size);
+            os.write(LINE_END);
+        }
+        updater.update(size, os.size());
     }
 
     /**
