@@ -66,9 +66,4 @@ public class AsyncRequestTest {
         semaphore.acquire();
         assertNotNull(listener.getResult());
     }
-
-    @Test
-    public void testPostExecuteAsync() throws Exception {
-
-    }
 }

@@ -1,5 +1,6 @@
 package com.tuz.network;
 
+import android.support.test.filters.SmallTest;
 import android.support.test.runner.AndroidJUnit4;
 
 import org.junit.Test;
@@ -15,6 +16,7 @@ import static org.junit.Assert.*;
  * Created by henrik on 2017-09-12.
  */
 @RunWith(AndroidJUnit4.class)
+@SmallTest
 public class MultipartFormUnitTest {
 
     private static class Updater implements ProgressUpdater {
