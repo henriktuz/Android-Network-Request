@@ -1,10 +1,12 @@
 package com.tuz.network;
 
 /**
- * Created by henrik on 2017-04-26.
+ * Interface returned by an async operation.
  */
-
 public interface Canceller {
 
+    /**
+     * Cancels an ongoing task.
+     */
     void cancel();
 }

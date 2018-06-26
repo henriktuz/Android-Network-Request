@@ -13,13 +13,7 @@ public class Parsers {
      * @return a parser for strings.
      */
     public static ResponseParser<String> newStringParser() {
-        return new ResponseParser<String>() {
-
-            @Override
-            public String parseResponse(Response response) throws Exception {
-                return Utils.toString(response.getInputStream());
-            }
-        };
+        return response -> Utils.toString(response.getInputStream());
     }
 
     /**
@@ -28,12 +22,6 @@ public class Parsers {
      * @return a parser for a json object.
      */
     public static ResponseParser<JSONObject> newJsonParser() {
-        return new ResponseParser<JSONObject>() {
-
-            @Override
-            public JSONObject parseResponse(Response response) throws Exception {
-                return Utils.toJson(response.getInputStream());
-            }
-        };
+        return response -> Utils.toJson(response.getInputStream());
     }
 }

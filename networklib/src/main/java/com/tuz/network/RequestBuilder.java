@@ -19,7 +19,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.security.cert.Certificate;
 
 /**
  * Builder for creating a request.
@@ -154,6 +153,6 @@ public final class RequestBuilder<Output> {
      * @return the Request.
      */
     public Request<Output> build() {
-        return new NetworkRequest(mRequest, mParser);
+        return new NetworkRequest<>(mRequest, mParser);
     }
 }

@@ -102,7 +102,7 @@ final class Response implements Closeable {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         if (mConnection != null) {
             mConnection.disconnect();
         }

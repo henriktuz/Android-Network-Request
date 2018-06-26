@@ -38,5 +38,4 @@ public interface Request<Output> {
      * @return a canceller.
      */
     Canceller executeAsync(RequestListener<Output> listener);
-
 }

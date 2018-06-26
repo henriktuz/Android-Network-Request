@@ -21,5 +21,4 @@ public interface RequestListener<Output> extends RequestProgressListener<Output>
      * @param result  the result.
      */
     void onExecutionDone(Request<Output> request, Output result);
-
 }
